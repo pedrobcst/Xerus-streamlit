@@ -1,7 +1,7 @@
 import io
 import os
 
-from config import AppSettings
+from conf import AppSettings
 
 
 def read_input(file: io.BytesIO) -> None:
