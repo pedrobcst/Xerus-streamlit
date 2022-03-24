@@ -88,18 +88,32 @@ if st.session_state['xerus_started']:
         st.write('Finished')
         st.session_state['xerus_object'] = results_search
     if st.session_state.xerus_object:
+        st.header('Analysis Results')
         results_search = st.session_state.xerus_object
-        try:
-            df = create_st_df(results_search.results.copy())
-            st.dataframe(df)
-        except NameError:
-            st.write("Press Run analysis again.")
-        # st.dataframe(results_search.results)
-
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            try:
+                df = create_st_df(results_search.results.copy())
+                st.text(' ')
+                st.text(' ')
+                st.text(' ')
+                st.text(' ')
+                st.text(' ')
+                st.text(' ')
+                st.text(' ')
+                st.text(' ')
+                st.dataframe(df)
+            except NameError:
+                st.write("Press Run analysis again.")
+            # st.dataframe(results_search.results)   
         with st.sidebar.expander("Results Viz"):
             viz_number = int(st.number_input("viz number", min_value=-1, max_value=len(df) -1 , step=1))
-            
-            
-        if viz_number != -1:
-            st.plotly_chart(results_search.plot_result(viz_number))
+        with col2:
+            if viz_number != -1:
+               fig = results_search.plot_result(viz_number, width=500, height=500)
+               fig.update_layout(title=None)
+               st.plotly_chart(fig, use_container_width=False)
+
+        
 

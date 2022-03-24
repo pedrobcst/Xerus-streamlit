@@ -16,7 +16,7 @@ def plot_read_data(data: str, format: str, poly_degree: int = 8, remove_base: bo
     df_new['int_new'] = df_new.int - background
     fig = px.scatter(data_frame = df_new, x='theta', y = 'int', labels={"theta": "Theta", "int": "Intensity"}, template="presentation")
     fig.data[0].mode = "markers"
-    fig.data[0].marker['color'] = 'black'
+    fig.data[0].marker['color'] = 'purple'
     fig.data[0].marker['symbol'] = 'circle-open'
     fig.data[0].name = "Exp. Data"
     fig.data[0].showlegend = True
