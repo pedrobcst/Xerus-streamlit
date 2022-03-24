@@ -8,7 +8,7 @@ from xerus_run import run_xerus
 
 os.makedirs(AppSettings.TMP_FOLDER, exist_ok=True)
 os.makedirs(AppSettings.RESULTS_TMP_FOLDER, exist_ok=True)
-from utils import create_st_df, process_input, read_input
+from utils import process_input, read_input
 
 st.title('XERUS Streamlit Interface Beta')
 st.sidebar.image("https://raw.githubusercontent.com/pedrobcst/Xerus/master/img/g163.png", width=100)
@@ -71,7 +71,7 @@ if st.session_state['xerus_started']:
         g = int(st.number_input("g", min_value=1, max_value  = 999, value=3, step=1, key="grabtop"))
         delta = st.number_input(r"delta", min_value=1.0, max_value=5.0, value=1.3, step=0.1, key="delta")
         ignore_ids = process_input(st.text_input("Ignore IDs", value="", key="ignore_ids"))
-        ignore_providers = process_input(st.text_input("Ignore providers", value="", key="ignore_providers"))
+        ignore_providers = process_input(st.text_input("Ignore providers", value="AFLOW", key="ignore_providers"))
         ignore_comb = process_input(st.text_input("Ignore combinations", value="", key="ignore_comb"))        
         st.write('ignore ids:', ignore_ids)
         st.write('ignore comb:', ignore_comb)
@@ -90,30 +90,17 @@ if st.session_state['xerus_started']:
     if st.session_state.xerus_object:
         st.header('Analysis Results')
         results_search = st.session_state.xerus_object
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            try:
-                df = create_st_df(results_search.results.copy())
-                st.text(' ')
-                st.text(' ')
-                st.text(' ')
-                st.text(' ')
-                st.text(' ')
-                st.text(' ')
-                st.text(' ')
-                st.text(' ')
-                st.dataframe(df)
-            except NameError:
-                st.write("Press Run analysis again.")
+        df = results_search.results.applymap(str)
+        df.drop(list(AppSettings.DROP_COLUMNS), axis=1, inplace=True)
+        st.dataframe(df)
             # st.dataframe(results_search.results)   
-        with st.sidebar.expander("Results Viz"):
+        with st.sidebar.expander("Viz Settings"):
             viz_number = int(st.number_input("viz number", min_value=-1, max_value=len(df) -1 , step=1))
-        with col2:
-            if viz_number != -1:
-               fig = results_search.plot_result(viz_number, width=500, height=500)
-               fig.update_layout(title=None)
-               st.plotly_chart(fig, use_container_width=False)
+        
+        if viz_number != -1:
+            fig = results_search.plot_result(viz_number)
+            fig.update_layout(title=None, width=800, height=600)
+            st.plotly_chart(fig, use_container_width=False)
 
         
 
