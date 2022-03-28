@@ -32,7 +32,7 @@ def read_input(file: io.BytesIO) -> None:
 
 
 
-def process_input(input: str) -> Union[None, List]:
+def process_input(input: str, return_int: bool = False) -> Union[None, List]:
     """Helper function to process streamlit inputs.
 
     Parameters
@@ -46,6 +46,12 @@ def process_input(input: str) -> Union[None, List]:
         Returns a list if the input is not empty. Otherwise, returns None.
     """
     if input:
+        if return_int:
+            return_list = [int(element) for element in input.split(",")]
+            if len(return_list) > 1:
+                return return_list
+            else:
+                return return_list[0]
         return input.split(",")
     else:
         return None
