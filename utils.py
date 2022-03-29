@@ -57,3 +57,31 @@ def process_input(input: str, return_int: bool = False) -> Union[None, List]:
         return None
 
     
+def make_simulation_df(cif_info: pd.DataFrame) -> pd.DataFrame:
+    """_summary_
+
+    Parameters
+    ----------
+    cif_info : pd.DataFrame
+        _description_
+
+    Returns
+    -------
+    pd.DataFrame
+        _description_
+    """
+    to_keep = [
+        "filename",
+        "spacegroup",
+        "crystal_system",
+        "spacegroup_number",
+        "Cij"
+    ]
+    df = cif_info.copy()
+    dfs = []
+    for i, row in df.iterrows():
+        simul_data = pd.read_csv(row['simulated_files'])
+        for tk in to_keep:
+            simul_data[tk] = row[tk]
+        dfs.append(simul_data)
+    return dfs

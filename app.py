@@ -7,12 +7,12 @@ import streamlit as st
 from st_aggrid import AgGrid
 
 from conf import AppSettings
-from xerus_plot import plot_read_data
+from xerus_plot import plot_highest_correlated, plot_read_data
 from xerus_run import run_opt, run_xerus
 
 os.makedirs(AppSettings.TMP_FOLDER, exist_ok=True)
 os.makedirs(AppSettings.RESULTS_TMP_FOLDER, exist_ok=True)
-from utils import process_input, read_input
+from utils import make_simulation_df, process_input, read_input
 
 st.title('XERUS Streamlit Interface Beta')
 st.sidebar.image("https://raw.githubusercontent.com/pedrobcst/Xerus/master/img/g163.png", width=100)
@@ -30,11 +30,11 @@ if 'optmized' not in st.session_state:
     
 
 
-@st.cache
+@st.cache(allow_output_mutation=True)
 def run_analysis(args_xerus: dict, args_analysis: dict):
     return run_xerus(args_xerus, args_analysis)
 
-@st.cache
+@st.cache(allow_output_mutation=True)
 def run_optmizer(xerus_object, index_list: Union[int, List[int]], opt_args: dict):
     return run_opt(xerus_object, index_list, opt_args)
 
@@ -114,15 +114,31 @@ if st.session_state['xerus_started']:
         df = results_search.results.copy()
         df.drop(list(AppSettings.DROP_COLUMNS), axis=1, inplace=True)
         df['id'] = df.index
+        simuls_df = results_search.simulated_gsas2
         df = df[['id', 'name', 'rwp', 'wt', 'spacegroup', 'crystal_system', 'system_type']]
+        st.subheader('Raw Results')
         AgGrid(df, width='50%', height=200)
         with st.sidebar.expander("Viz Settings"):
             viz_number = int(st.number_input("viz number", min_value=-1, max_value=len(df) -1 , step=1, key='viz_number'))
-        
+            plot_highest_corr = st.checkbox("Plot Highest correlated", value=False, key='plot_highest_corr')
+            if plot_highest_corr:
+                highest_correlated = int(st.number_input("highest k correlated", min_value=1, max_value=len(simuls_df) - 1, value=1, step=1, key='highest_corr'))
+                fig_highest_corr = plot_highest_correlated(data = results_search.exp_data_file, format=data_format, cif_info=results_search.cif_info.copy(), top = highest_correlated, width=800, height=600)
+
+
         if viz_number != -1:
+            st.subheader('Vizualization of Result') 
             fig = results_search.plot_result(viz_number)
             fig.update_layout(title=None, width=800, height=600)
+            fig.update_xaxes(title=r'2theta (deg.)')
             st.plotly_chart(fig, use_container_width=False)
+        
+        if plot_highest_corr:
+                st.subheader(f'{highest_correlated} highest correlated phases')
+                st.plotly_chart(fig_highest_corr)
+
+
+
         
         if st.sidebar.button('Zip Contents'):
             shutil.make_archive(working_folder, 'zip', working_folder)
@@ -166,7 +182,7 @@ if st.session_state['xerus_started']:
             random_state=random_state, 
             force_ori=force_ori
             )
-            st.write(optimizer_idx)
+            st.header("Opt Args:")
             st.write(opt_args)
             if st.button('Run optimization'):
                 st.session_state['xerus_object'] = run_optmizer(results_search, optimizer_idx, opt_args)
@@ -177,6 +193,10 @@ if st.session_state['xerus_started']:
             with st.sidebar.expander('Check optimization'):
                 plot1 = st.checkbox('plot_best')
 
+            st.write(f'Optimization finished. Best rwp is {st.session_state.xerus_object.optimizer.optim.rwp_best}')
+            if plot1:
+                fig = st.session_state.xerus_object.optimizer.optim.plot_best(save=False, engine="plotly")
+                st.plotly_chart(fig)
 
         
 
