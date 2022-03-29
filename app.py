@@ -2,7 +2,7 @@ import os
 import shutil
 from typing import List, Union
 
-import numpy as np
+import pandas as pd
 import streamlit as st
 from st_aggrid import AgGrid
 
@@ -192,11 +192,19 @@ if st.session_state['xerus_started']:
         if st.session_state['optmized']:
             with st.sidebar.expander('Check optimization'):
                 plot1 = st.checkbox('plot_best')
+                show_crys = st.checkbox('show crystal struct. results')
+                if st.button('Export Results to Working Folder'):
+                    st.session_state.xerus_object.export_results()
+                    st.write('Optimizaton results were exported to folder!')
+                    st.write('Rezip and press download again!')
 
             st.write(f'Optimization finished. Best rwp is {st.session_state.xerus_object.optimizer.optim.rwp_best}')
             if plot1:
                 fig = st.session_state.xerus_object.optimizer.optim.plot_best(save=False, engine="plotly")
                 st.plotly_chart(fig)
+
+            if show_crys:
+                AgGrid(pd.DataFrame(data=st.session_state.xerus_object.optimizer.lattice_best))
 
         
 
