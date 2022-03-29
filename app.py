@@ -1,17 +1,18 @@
 import os
 import shutil
+from typing import List, Union
 
-import numpy as np
+import pandas as pd
 import streamlit as st
 from st_aggrid import AgGrid
 
 from conf import AppSettings
-from xerus_plot import plot_read_data
-from xerus_run import run_xerus
+from xerus_plot import plot_highest_correlated, plot_read_data
+from xerus_run import run_opt, run_xerus
 
 os.makedirs(AppSettings.TMP_FOLDER, exist_ok=True)
 os.makedirs(AppSettings.RESULTS_TMP_FOLDER, exist_ok=True)
-from utils import process_input, read_input
+from utils import make_simulation_df, process_input, read_input
 
 st.title('XERUS Streamlit Interface Beta')
 st.sidebar.image("https://raw.githubusercontent.com/pedrobcst/Xerus/master/img/g163.png", width=100)
@@ -23,12 +24,19 @@ if 'xerus_object' not in st.session_state:
     st.session_state['xerus_object'] = None
 if 'zip_file' not in st.session_state:
     st.session_state['zip_file'] = False
+
+if 'optmized' not in st.session_state:
+    st.session_state['optmized'] = False
     
 
 
-@st.cache
-def run_analysis(args_xerus, args_analysis):
+@st.cache(allow_output_mutation=True)
+def run_analysis(args_xerus: dict, args_analysis: dict):
     return run_xerus(args_xerus, args_analysis)
+
+@st.cache(allow_output_mutation=True)
+def run_optmizer(xerus_object, index_list: Union[int, List[int]], opt_args: dict):
+    return run_opt(xerus_object, index_list, opt_args)
 
 # Settings
 with st.sidebar.expander("Settings", expanded=False):
@@ -62,6 +70,7 @@ if file:
         st.session_state['xerus_started'] = True
         st.session_state['xerus_object'] = None 
         st.session_state['zip_file'] = False
+        st.session_state['optmized'] = False
         # st.session_state.xerus_object = XRay(name=name, working_folder=working_folder, exp_data_file=path,
         # elements=elements, max_oxy=max_oxygen, use_preprocessed=use_preprocessed,remove_background=remove_background,poly_degree=poly_degree, data_fmt=data_format)
 
@@ -94,24 +103,42 @@ if st.session_state['xerus_started']:
 
         with st.spinner('Running analysis...'):
             results_search  = run_analysis(args_xerus, args_analysis)
+            st.session_state['optmized'] = False
         st.write('Finished')
         st.balloons()
         st.session_state['xerus_object'] = results_search
+
     if st.session_state.xerus_object:
         st.header('Analysis Results')
         results_search = st.session_state.xerus_object
         df = results_search.results.copy()
         df.drop(list(AppSettings.DROP_COLUMNS), axis=1, inplace=True)
         df['id'] = df.index
+        simuls_df = results_search.simulated_gsas2
         df = df[['id', 'name', 'rwp', 'wt', 'spacegroup', 'crystal_system', 'system_type']]
+        st.subheader('Raw Results')
         AgGrid(df, width='50%', height=200)
         with st.sidebar.expander("Viz Settings"):
             viz_number = int(st.number_input("viz number", min_value=-1, max_value=len(df) -1 , step=1, key='viz_number'))
-        
+            plot_highest_corr = st.checkbox("Plot Highest correlated", value=False, key='plot_highest_corr')
+            if plot_highest_corr:
+                highest_correlated = int(st.number_input("highest k correlated", min_value=1, max_value=len(simuls_df) - 1, value=1, step=1, key='highest_corr'))
+                fig_highest_corr = plot_highest_correlated(data = results_search.exp_data_file, format=data_format, cif_info=results_search.cif_info.copy(), top = highest_correlated, width=800, height=600)
+
+
         if viz_number != -1:
+            st.subheader('Vizualization of Result') 
             fig = results_search.plot_result(viz_number)
             fig.update_layout(title=None, width=800, height=600)
+            fig.update_xaxes(title=r'2theta (deg.)')
             st.plotly_chart(fig, use_container_width=False)
+        
+        if plot_highest_corr:
+                st.subheader(f'{highest_correlated} highest correlated phases')
+                st.plotly_chart(fig_highest_corr)
+
+
+
         
         if st.sidebar.button('Zip Contents'):
             shutil.make_archive(working_folder, 'zip', working_folder)
@@ -128,11 +155,56 @@ if st.session_state['xerus_started']:
                     )
 
         with st.sidebar.expander('Optimizer Settings'):
+            optimizer_idx = process_input(st.text_input('Indexes to optmize seperated by comma:', value="0", key="opt_list"), return_int=True)
+
             n_trials = int(st.number_input("Number of trials", min_value=20, max_value=99999, value=200, step=1, key="n_trials"))
 
+            allow_pref_orient = st.checkbox('Pref Orientation', value = True, key='pref_ori')
 
+            allow_atomic_params = st.checkbox('Atomic Params', value = False, key = 'atomic')
+            
+            allow_broad = st.checkbox('Atomic Params', value = False, key = 'broadening')
 
+            allow_angle = st.checkbox('Acute angle', value = False, key = 'acute')
+            
+            force_ori = st.checkbox('Force to use pref. ori', value = False, key = 'force_ori')
 
+            param = st.selectbox(label="Param to optimize", options=["rwp", "gof"])
+
+            random_state = int(st.number_input(label="Random seed number", min_value=0, max_value=9999, step=1, value=42, key='random_state'))
+            
+            opt_args = dict(n_trials=n_trials,
+            allow_pref_orient=allow_pref_orient, 
+            allow_atomic_params=allow_atomic_params, 
+            allow_broad=allow_broad,
+            allow_angle=allow_angle,
+            param=param,
+            random_state=random_state, 
+            force_ori=force_ori
+            )
+            st.header("Opt Args:")
+            st.write(opt_args)
+            if st.button('Run optimization'):
+                st.session_state['xerus_object'] = run_optmizer(results_search, optimizer_idx, opt_args)
+                st.session_state['optmized'] = True
+                st.balloons()
+
+        if st.session_state['optmized']:
+            with st.sidebar.expander('Check optimization'):
+                plot1 = st.checkbox('plot_best')
+                show_crys = st.checkbox('show crystal struct. results')
+                if st.button('Export Results to Working Folder'):
+                    st.session_state.xerus_object.export_results()
+                    st.write('Optimizaton results were exported to folder!')
+                    st.write('Rezip and press download again!')
+
+            st.write(f'Optimization finished. Best rwp is {st.session_state.xerus_object.optimizer.optim.rwp_best}')
+            if plot1:
+                fig = st.session_state.xerus_object.optimizer.optim.plot_best(save=False, engine="plotly")
+                st.plotly_chart(fig)
+
+            if show_crys:
+                AgGrid(pd.DataFrame(data=st.session_state.xerus_object.optimizer.lattice_best))
 
         
 
