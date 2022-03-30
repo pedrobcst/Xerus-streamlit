@@ -43,7 +43,8 @@ def run_optmizer(xerus_object, index_list: Union[int, List[int]], opt_args: dict
 with st.sidebar.expander("Settings", expanded=False):
     name = st.text_input("Dataset name", key="name")
     file = st.file_uploader("Upload data", key="data_uploaded")
-    data_format = st.text_input("Data format", value="ras", key="data_format")
+    if file:
+        data_format = st.text_input("Data format", value=file.name.split(".")[-1], key="data_format")
     elements = st.text_input("Elements seperated by comma", value="Ho", key="element_list").split(",")
     max_oxygen = st.number_input("Max oxygen", min_value=0, max_value=10, step=1, value=2, key="max_oxy")
     use_preprocessed = st.checkbox("Use preprocessed data", value=False, key="use_pre")
@@ -54,7 +55,6 @@ with st.sidebar.expander("Settings", expanded=False):
         poly_degree = 10
     
     st.write("Current element list is:", elements)
-    st.write("data format is:", data_format)
     
     
 if file:
@@ -91,7 +91,7 @@ if st.session_state['xerus_started']:
         ignore_providers = process_input(st.text_input("Ignore providers", value="AFLOW", key="ignore_providers"))
         ignore_comb = process_input(st.text_input("Ignore combinations", value="", key="ignore_comb"))        
         st.write('ignore ids:', ignore_ids)
-        st.write('ignore comb:', ignore_comb)
+        st.write('ignore comb:', ignore_comb)   
         st.write('ignore providers:', ignore_providers)
     # initialize = st.sidebar.button("Initialize XERUS", key="xerus_init")
     st.markdown("<hr>", unsafe_allow_html=True)
@@ -120,7 +120,7 @@ if st.session_state['xerus_started']:
         st.subheader('Raw Results')
         AgGrid(df, width='50%', height=200)
         with st.sidebar.expander("Viz Settings"):
-            viz_number = int(st.number_input("Index of dataframe to visualize", min_value=-1, max_value=len(df) -1 , step=1, key='viz_number'))
+            viz_number = int(st.number_input("Index of dataframe to visualize",value=0, min_value=-1, max_value=len(df) -1 , step=1, key='viz_number'))
             plot_highest_corr = st.checkbox("Plot Highest correlated", value=False, key='plot_highest_corr')
             if plot_highest_corr:
                 highest_correlated = int(st.number_input("Highest k correlated phases", min_value=1, max_value=len(simuls_df) - 1, value=len(simuls_df) // 2, step=1, key='highest_corr'))
