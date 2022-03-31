@@ -35,9 +35,11 @@ if 'optmized' not in st.session_state:
 def run_analysis(args_xerus: dict, args_analysis: dict):
     return run_xerus(args_xerus, args_analysis)
 
+
 @st.cache(allow_output_mutation=True)
 def run_optmizer(xerus_object, index_list: Union[int, List[int]], opt_args: dict):
     return run_opt(xerus_object, index_list, opt_args)
+
 
 # Settings
 with st.sidebar.expander("Settings", expanded=False):
@@ -45,66 +47,56 @@ with st.sidebar.expander("Settings", expanded=False):
     file = st.file_uploader("Upload data", key="data_uploaded")
     if file:
         data_format = st.text_input("Data format", value=file.name.split(".")[-1], key="data_format")
-    elements = st.text_input("Elements seperated by comma", value="Ho", key="element_list").split(",")
-    max_oxygen = st.number_input("Max oxygen", min_value=0, max_value=10, step=1, value=2, key="max_oxy")
-    use_preprocessed = st.checkbox("Use preprocessed data", value=False, key="use_pre")
-    remove_background = st.checkbox("Remove background", value=True, key="remove_bg")
-    if remove_background:
-        poly_degree = st.number_input("Polynomial degree", min_value=2, max_value=12, step=1, value=8, key="poly_degree")
-    else:
-        poly_degree = 10
-    
-    st.write("Current element list is:", elements)
-    
-    
 if file:
     path = read_input(file)
     working_folder = os.path.join(AppSettings.RESULTS_TMP_FOLDER, file.name.split(".")[0]) + f"_{name}"
     os.makedirs(working_folder, exist_ok=True)
-    # st.write("File uploaded to:", path)
-    # st.write(f"Current file is {path}")
-    # st.write(f"Working folder is {working_folder}")
-
-if file:
-    analysis = st.sidebar.button("View data", key="xerus_init")
-    if analysis:
-        st.session_state['xerus_started'] = True
-        st.session_state['xerus_object'] = None 
-        st.session_state['zip_file'] = False
-        st.session_state['optmized'] = False
-        # st.session_state.xerus_object = XRay(name=name, working_folder=working_folder, exp_data_file=path,
-        # elements=elements, max_oxy=max_oxygen, use_preprocessed=use_preprocessed,remove_background=remove_background,poly_degree=poly_degree, data_fmt=data_format)
-
-if st.session_state['xerus_started']:
     st.header('Loaded data')
     if path:
-        figure = plot_read_data(path, format=data_format, poly_degree=int(poly_degree), remove_base=remove_background)
-        st.plotly_chart(figure)
+        c1, c2 = st.columns(2)
+        with c1:
+            remove_background = st.checkbox("Remove background", value=True, key="remove_bg")
+            if remove_background:
+                poly_degree = st.number_input("Polynomial degree", min_value=2, max_value=12, step=1, value=8,key="poly_degree")
+                
+            else:
+                poly_degree = 10
+            elements = st.text_input("Elements seperated by comma", value="Ho", key="element_list").split(",")
+            max_oxygen = st.number_input("Max oxygen", min_value=0, max_value=10, step=1, value=2, key="max_oxy")
+            use_preprocessed = st.checkbox("Use preprocessed data", value=False, key="use_pre")
+            st.write("Current element list is:", elements)
+        with c2:
+            figure = plot_read_data(path, format=data_format, poly_degree=int(poly_degree), remove_base=remove_background)
+            st.plotly_chart(figure)
     with st.sidebar.expander('Analysis settings'):
         n_runs = st.text_input("Number of runs", value="auto", key="n_runs")
         if n_runs != "auto":
             n_runs = int(n_runs)
             st.write("Number of runs:", n_runs)
-        g = int(st.number_input("g", min_value=1, max_value  = 999, value=3, step=1, key="grabtop"))
+        g = int(st.number_input("g", min_value=1, max_value=999, value=3, step=1, key="grabtop"))
         delta = st.number_input(r"delta", min_value=1.0, max_value=5.0, value=1.3, step=0.1, key="delta")
         ignore_ids = process_input(st.text_input("Ignore IDs", value="", key="ignore_ids"))
         ignore_providers = process_input(st.text_input("Ignore providers", value="AFLOW", key="ignore_providers"))
-        ignore_comb = process_input(st.text_input("Ignore combinations", value="", key="ignore_comb"))        
+        ignore_comb = process_input(st.text_input("Ignore combinations", value="", key="ignore_comb"))
         st.write('ignore ids:', ignore_ids)
-        st.write('ignore comb:', ignore_comb)   
+        st.write('ignore comb:', ignore_comb)
         st.write('ignore providers:', ignore_providers)
     # initialize = st.sidebar.button("Initialize XERUS", key="xerus_init")
     st.markdown("<hr>", unsafe_allow_html=True)
 
     run = st.sidebar.button("Run analysis", key="run_analysis")
     if run:
-        args_xerus = dict(name=name, working_folder=working_folder, exp_data_file=path,elements=elements, max_oxy=max_oxygen, use_preprocessed=use_preprocessed,remove_background=remove_background,poly_degree=poly_degree, data_fmt=data_format)
+        args_xerus = dict(name=name, working_folder=working_folder, exp_data_file=path, elements=elements,
+                          max_oxy=max_oxygen, use_preprocessed=use_preprocessed, remove_background=remove_background,
+                          poly_degree=poly_degree, data_fmt=data_format)
 
-        args_analysis = dict(n_runs=n_runs, grabtop=g, delta=delta, ignore_ids=ignore_ids, ignore_provider=ignore_providers, ignore_comb=ignore_comb)
+        args_analysis = dict(n_runs=n_runs, grabtop=g, delta=delta, ignore_ids=ignore_ids,
+                             ignore_provider=ignore_providers, ignore_comb=ignore_comb)
 
         with st.spinner('Running analysis...'):
-            results_search  = run_analysis(args_xerus, args_analysis)
+            results_search = run_analysis(args_xerus, args_analysis)
             st.session_state['optmized'] = False
+            st.session_state['zip_file'] = False
         st.write('Finished')
         st.balloons()
         st.session_state['xerus_object'] = results_search
@@ -120,31 +112,33 @@ if st.session_state['xerus_started']:
         st.subheader('Raw Results')
         AgGrid(df, width='50%', height=200)
         with st.sidebar.expander("Viz Settings"):
-            viz_number = int(st.number_input("Index of dataframe to visualize",value=0, min_value=-1, max_value=len(df) -1 , step=1, key='viz_number'))
+            viz_number = int(
+                st.number_input("Index of dataframe to visualize", value=0, min_value=-1, max_value=len(df) - 1, step=1,
+                                key='viz_number'))
             plot_highest_corr = st.checkbox("Plot Highest correlated", value=False, key='plot_highest_corr')
             if plot_highest_corr:
-                highest_correlated = int(st.number_input("Highest k correlated phases", min_value=1, max_value=len(simuls_df) - 1, value=len(simuls_df) // 2, step=1, key='highest_corr'))
-                fig_highest_corr = plot_highest_correlated(data = results_search.exp_data_file, format=data_format, cif_info=results_search.cif_info.copy(), top = highest_correlated, width=800, height=600)
-
+                highest_correlated = int(
+                    st.number_input("Highest k correlated phases", min_value=1, max_value=len(simuls_df) - 1,
+                                    value=len(simuls_df) // 2, step=1, key='highest_corr'))
+                fig_highest_corr = plot_highest_correlated(data=results_search.exp_data_file, format=data_format,
+                                                           cif_info=results_search.cif_info.copy(),
+                                                           top=highest_correlated, width=800, height=600)
 
         if viz_number != -1:
-            st.subheader('Visualization of Analysis') 
+            st.subheader('Visualization of Analysis')
             fig = results_search.plot_result(viz_number)
             fig.update_layout(title=None, width=800, height=600)
             fig.update_xaxes(title=r'2theta (deg.)')
             st.plotly_chart(fig, use_container_width=False)
-        
+
         if plot_highest_corr:
-                st.subheader(f'{highest_correlated} highest correlated phases')
-                st.plotly_chart(fig_highest_corr)
+            st.subheader(f'{highest_correlated} highest correlated phases')
+            st.plotly_chart(fig_highest_corr)
 
-
-
-        
         if st.sidebar.button('Zip Contents'):
             shutil.make_archive(working_folder, 'zip', working_folder)
             st.session_state['zip_file'] = True
-        
+
         if st.session_state['zip_file']:
             if os.path.exists(f"{working_folder}.zip"):
                 with open(f"{working_folder}.zip", "rb") as fp:
@@ -156,33 +150,37 @@ if st.session_state['xerus_started']:
                     )
 
         with st.sidebar.expander('Optimizer Settings'):
-            optimizer_idx = process_input(st.text_input('Indexes to optmize seperated by comma:', value="0", key="opt_list"), return_int=True)
+            optimizer_idx = process_input(
+                st.text_input('Indexes to optmize seperated by comma:', value="0", key="opt_list"), return_int=True)
 
-            n_trials = int(st.number_input("Number of trials", min_value=20, max_value=99999, value=200, step=1, key="n_trials"))
+            n_trials = int(
+                st.number_input("Number of trials", min_value=20, max_value=99999, value=200, step=1, key="n_trials"))
 
-            allow_pref_orient = st.checkbox('Pref Orientation', value = True, key='pref_ori')
+            allow_pref_orient = st.checkbox('Pref Orientation', value=True, key='pref_ori')
 
-            allow_atomic_params = st.checkbox('Atomic Params', value = False, key = 'atomic')
-            
-            allow_broad = st.checkbox('Atomic Params', value = False, key = 'broadening')
+            allow_atomic_params = st.checkbox('Atomic Params', value=False, key='atomic')
 
-            allow_angle = st.checkbox('Acute angle', value = False, key = 'acute')
-            
-            force_ori = st.checkbox('Force to use pref. ori', value = False, key = 'force_ori')
+            allow_broad = st.checkbox('Atomic Params', value=False, key='broadening')
+
+            allow_angle = st.checkbox('Acute angle', value=False, key='acute')
+
+            force_ori = st.checkbox('Force to use pref. ori', value=False, key='force_ori')
 
             param = st.selectbox(label="Param to optimize", options=["rwp", "gof"])
 
-            random_state = int(st.number_input(label="Random seed number", min_value=0, max_value=9999, step=1, value=42, key='random_state'))
-            
+            random_state = int(
+                st.number_input(label="Random seed number", min_value=0, max_value=9999, step=1, value=42,
+                                key='random_state'))
+
             opt_args = dict(n_trials=n_trials,
-            allow_pref_orient=allow_pref_orient, 
-            allow_atomic_params=allow_atomic_params, 
-            allow_broad=allow_broad,
-            allow_angle=allow_angle,
-            param=param,
-            random_state=random_state, 
-            force_ori=force_ori
-            )
+                            allow_pref_orient=allow_pref_orient,
+                            allow_atomic_params=allow_atomic_params,
+                            allow_broad=allow_broad,
+                            allow_angle=allow_angle,
+                            param=param,
+                            random_state=random_state,
+                            force_ori=force_ori
+                            )
             st.header("Opt Args:")
             st.write(opt_args)
             if st.button('Run optimization'):
@@ -198,9 +196,10 @@ if st.session_state['xerus_started']:
                     st.session_state.xerus_object.export_results()
                     st.write('Optimizaton results were exported to folder!')
                     st.write('Rezip and press download again!')
-            
+
             st.header('Optimization Results')
-            st.write(f'Optimization finished. Best rwp is {st.session_state.xerus_object.optimizer.optim.rwp_best:.3f}\%')
+            st.write(
+                f'Optimization finished. Best rwp is {st.session_state.xerus_object.optimizer.optim.rwp_best:.3f}%')
             if plot1:
                 st.subheader('Refinement Result')
                 fig = st.session_state.xerus_object.optimizer.optim.plot_best(save=False, engine="plotly")
@@ -209,6 +208,3 @@ if st.session_state['xerus_started']:
             if show_crys:
                 st.subheader('Crystal Structure Result')
                 AgGrid(pd.DataFrame(data=st.session_state.xerus_object.optimizer.lattice_best), height=100)
-
-        
-

@@ -8,7 +8,7 @@ import pandas as pd
 from conf import AppSettings
 
 
-def read_input(file: io.BytesIO) -> None:
+def read_input(file: io.BytesIO) -> str:
     """Helper function to save the input file into a temporary folder.
 
     Parameters
