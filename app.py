@@ -42,49 +42,59 @@ def run_optmizer(xerus_object, index_list: Union[int, List[int]], opt_args: dict
 
 
 # Settings
-with st.sidebar.expander("Settings", expanded=False):
-    name = st.text_input("Dataset name", key="name")
-    file = st.file_uploader("Upload data", key="data_uploaded")
-    if file:
-        data_format = st.text_input("Data format", value=file.name.split(".")[-1], key="data_format")
+st.sidebar.header("Data Upload and Name")
+name = st.sidebar.text_input("Dataset name", key="name")
+file = st.sidebar.file_uploader("Upload data", key="data_uploaded")
+if file:
+    data_format = st.sidebar.text_input("Data format", value=file.name.split(".")[-1], key="data_format")
 if file:
     path = read_input(file)
     working_folder = os.path.join(AppSettings.RESULTS_TMP_FOLDER, file.name.split(".")[0]) + f"_{name}"
     os.makedirs(working_folder, exist_ok=True)
-    st.header('Loaded data')
-    if path:
-        c1, c2 = st.columns(2)
+    with st.expander('Data View and Settings', expanded=True):
+        if path:
+            c1, c2 = st.columns([2, 4])
+            with c1:
+                remove_background = st.checkbox("Remove background", value=True, key="remove_bg")
+                use_preprocessed = st.checkbox("Use preprocessed data", value=False, key="use_pre")
+                if remove_background:
+                    poly_degree = st.number_input("Polynomial degree", min_value=2, max_value=12, step=1, value=8,key="poly_degree")
+                    
+                else:
+                    poly_degree = 10
+                elements = st.text_input("Elements seperated by comma", value="Ho", key="element_list").split(",")
+                elements = [element.strip() for element in elements if len(element) > 0]
+                max_oxygen = st.number_input("Max oxygen", min_value=0, max_value=10, step=1, value=2, key="max_oxy")
+                st.write("Current element list is:", elements)
+            with c2:
+                figure = plot_read_data(path, format=data_format, poly_degree=int(poly_degree), remove_base=remove_background)
+                figure.update_layout(legend=dict(yanchor="top",y=1.35,xanchor="left",x=0.00, bgcolor="white"))
+                st.plotly_chart(figure, use_container_width=True, template="presentation", bgcolor="white")
+    c1, c2 = st.columns(2)
+    with c1:
+        with st.expander('Required Analysis Settings', expanded=True):
+            n_runs = st.text_input("Number of runs", value="auto", key="n_runs")
+            if n_runs != "auto":
+                n_runs = int(n_runs)
+                st.write("Number of runs:", n_runs)
+            g = int(st.number_input("g", min_value=1, max_value=999, value=3, step=1, key="grabtop"))
+            delta = st.number_input(r"delta", min_value=1.0, max_value=5.0, value=1.3, step=0.1, key="delta")
+    with c2:
+        with st.expander("Optional Analysis Settings", expanded=True):
+            ignore_ids = process_input(st.text_input("Ignore IDs", value="", key="ignore_ids"))
+            ignore_providers = process_input(st.text_input("Ignore providers", value="AFLOW", key="ignore_providers"))
+            ignore_comb = process_input(st.text_input("Ignore combinations", value="", key="ignore_comb"))
+    with st.expander("Current Filter Settings", expanded=False):
+        c1, c2, c3 = st.columns(3)
         with c1:
-            remove_background = st.checkbox("Remove background", value=True, key="remove_bg")
-            if remove_background:
-                poly_degree = st.number_input("Polynomial degree", min_value=2, max_value=12, step=1, value=8,key="poly_degree")
-                
-            else:
-                poly_degree = 10
-            elements = st.text_input("Elements seperated by comma", value="Ho", key="element_list").split(",")
-            max_oxygen = st.number_input("Max oxygen", min_value=0, max_value=10, step=1, value=2, key="max_oxy")
-            use_preprocessed = st.checkbox("Use preprocessed data", value=False, key="use_pre")
-            st.write("Current element list is:", elements)
+            st.write('ignore ids:', ignore_ids)
         with c2:
-            figure = plot_read_data(path, format=data_format, poly_degree=int(poly_degree), remove_base=remove_background)
-            st.plotly_chart(figure)
-    with st.sidebar.expander('Analysis settings'):
-        n_runs = st.text_input("Number of runs", value="auto", key="n_runs")
-        if n_runs != "auto":
-            n_runs = int(n_runs)
-            st.write("Number of runs:", n_runs)
-        g = int(st.number_input("g", min_value=1, max_value=999, value=3, step=1, key="grabtop"))
-        delta = st.number_input(r"delta", min_value=1.0, max_value=5.0, value=1.3, step=0.1, key="delta")
-        ignore_ids = process_input(st.text_input("Ignore IDs", value="", key="ignore_ids"))
-        ignore_providers = process_input(st.text_input("Ignore providers", value="AFLOW", key="ignore_providers"))
-        ignore_comb = process_input(st.text_input("Ignore combinations", value="", key="ignore_comb"))
-        st.write('ignore ids:', ignore_ids)
-        st.write('ignore comb:', ignore_comb)
-        st.write('ignore providers:', ignore_providers)
-    # initialize = st.sidebar.button("Initialize XERUS", key="xerus_init")
+            st.write('ignore comb:', ignore_comb)
+        with c3:
+            st.write('ignore providers:', ignore_providers)
+        # initialize = st.sidebar.button("Initialize XERUS", key="xerus_init")
+    run = st.button("Run analysis", key="run_analysis")
     st.markdown("<hr>", unsafe_allow_html=True)
-
-    run = st.sidebar.button("Run analysis", key="run_analysis")
     if run:
         args_xerus = dict(name=name, working_folder=working_folder, exp_data_file=path, elements=elements,
                           max_oxy=max_oxygen, use_preprocessed=use_preprocessed, remove_background=remove_background,

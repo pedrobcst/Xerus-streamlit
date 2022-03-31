@@ -47,10 +47,10 @@ def plot_read_data(data: str, format: str, poly_degree: int = 8, remove_base: bo
                 "symbol": "line-ns",
                 "line_width": 1,
                 "size": 12,
-                "line": {"color": "red"}
+                "line": {"color": "orange"}
             }
         )
-        fig.data[2].marker['color'] = "red"
+        fig.data[2].marker['color'] = "orange"
         fig.data[1].marker['color'] = "blue"
     return fig
 
