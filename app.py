@@ -12,11 +12,13 @@ from xerus_run import run_opt, run_xerus
 
 os.makedirs(AppSettings.TMP_FOLDER, exist_ok=True)
 os.makedirs(AppSettings.RESULTS_TMP_FOLDER, exist_ok=True)
-from utils import process_input, read_input
+from utils import make_selection_label, process_input, read_input
 
 st.title('XERUS Streamlit Interface Alpha')
 st.sidebar.markdown("**X**Ray **E**stimation and **R**efinement **U**sing **S**imilarity (**XERUS**)")
 st.sidebar.image("https://raw.githubusercontent.com/pedrobcst/Xerus/master/img/g163.png", width=100)
+
+base_columns = list(AppSettings.KEEP_COLUMNS)
 
 # Session state stuff
 if 'xerus_started' not in st.session_state:
@@ -41,7 +43,7 @@ def run_optmizer(xerus_object, index_list: Union[int, List[int]], opt_args: dict
     return run_opt(xerus_object, index_list, opt_args)
 
 def st_pad(times):
-    """Hack to pad widges with empty strings.
+    """Hack to pad widgets with empty strings.
 
     Parameters
     ----------
@@ -58,7 +60,6 @@ name = st.sidebar.text_input("Dataset name", key="name")
 file = st.sidebar.file_uploader("Upload data", key="data_uploaded")
 if file:
     data_format = st.sidebar.text_input("Data format", value=file.name.split(".")[-1], key="data_format")
-if file:
     path = read_input(file)
     working_folder = os.path.join(AppSettings.RESULTS_TMP_FOLDER, file.name.split(".")[0]) + f"_{name}"
     os.makedirs(working_folder, exist_ok=True)
@@ -87,7 +88,6 @@ if file:
             n_runs = st.text_input("Number of runs", value="auto", key="n_runs")
             if n_runs != "auto":
                 n_runs = int(n_runs)
-                st.write("Number of runs:", n_runs)
             g = int(st.number_input("g", min_value=1, max_value=999, value=3, step=1, key="grabtop"))
             delta = st.number_input(r"delta", min_value=1.0, max_value=5.0, value=1.3, step=0.1, key="delta")
     with c2:
@@ -95,6 +95,7 @@ if file:
             ignore_ids = process_input(st.text_input("Ignore IDs", value="", key="ignore_ids"))
             ignore_providers = process_input(st.text_input("Ignore providers", value="AFLOW", key="ignore_providers"))
             ignore_comb = process_input(st.text_input("Ignore combinations", value="", key="ignore_comb"))
+            
     with st.expander("Current Filter Settings", expanded=False):
         c1, c2, c3 = st.columns(3)
         with c1:
@@ -103,10 +104,7 @@ if file:
             st.write('ignore comb:', ignore_comb)
         with c3:
             st.write('ignore providers:', ignore_providers)
-        # initialize = st.sidebar.button("Initialize XERUS", key="xerus_init")
-    run = st.button("Run analysis", key="run_analysis")
-    st.markdown("<hr>", unsafe_allow_html=True)
-    if run:
+    if st.button("Run analysis", key="run_analysis"):
         args_xerus = dict(name=name, working_folder=working_folder, exp_data_file=path, elements=elements,
                           max_oxy=max_oxygen, use_preprocessed=use_preprocessed, remove_background=remove_background,
                           poly_degree=poly_degree, data_fmt=data_format)
@@ -114,11 +112,9 @@ if file:
         args_analysis = dict(n_runs=n_runs, grabtop=g, delta=delta, ignore_ids=ignore_ids,
                              ignore_provider=ignore_providers, ignore_comb=ignore_comb)
 
-        with st.spinner('Running analysis...'):
-            results_search = run_analysis(args_xerus, args_analysis)
-            st.session_state['optmized'] = False
-            st.session_state['zip_file'] = False
-        st.write('Finished')
+        results_search = run_analysis(args_xerus, args_analysis)
+        st.session_state['optmized'] = False
+        st.session_state['zip_file'] = False
         st.balloons()
         st.session_state['xerus_object'] = results_search
 
@@ -126,15 +122,17 @@ if file:
         st.header('Analysis Results')
         results_search = st.session_state.xerus_object
         df = results_search.results.copy()
-        df.drop(list(AppSettings.DROP_COLUMNS), axis=1, inplace=True)
+        if 'wt' in df.columns:
+            base_columns.append('wt')
+        df = df[base_columns]
         df['id'] = df.index
         simuls_df = results_search.simulated_gsas2
-        df = df[['id', 'name', 'rwp', 'wt', 'spacegroup', 'crystal_system', 'system_type']]
+        df = df[['id'] + base_columns]
 
         with st.expander('Results (Tabular)', expanded = True):
             AgGrid(df, width='50%', height=200)
         with st.expander('Visualization of Analysis', expanded = True):
-            viz_number = st.selectbox("Results to Visualize", options=df.index, key="viz_number", format_func = lambda idx: df.loc[idx,"name"])
+            viz_number = st.selectbox("Results to Visualize", options=df.index, key="viz_number", format_func = lambda idx: make_selection_label(idx, df))
             fig = results_search.plot_result(viz_number)
             fig.update_layout(title=None, width=800, height=500)
             fig.update_xaxes(title=r'2theta (deg.)')
@@ -212,7 +210,6 @@ if file:
                 st.session_state['xerus_object'] = run_optmizer(results_search, optimizer_idx, opt_args)
                 st.session_state['optmized'] = True
                 st.balloons()
-        st.markdown("<hr>", unsafe_allow_html=True)
         if st.session_state['optmized']:
             with st.expander('Optimization Results'):
                 st.write(
