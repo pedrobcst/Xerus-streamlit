@@ -40,6 +40,17 @@ def run_analysis(args_xerus: dict, args_analysis: dict):
 def run_optmizer(xerus_object, index_list: Union[int, List[int]], opt_args: dict):
     return run_opt(xerus_object, index_list, opt_args)
 
+def st_pad(times):
+    """Hack to pad widges with empty strings.
+
+    Parameters
+    ----------
+    times : _type_
+        _description_
+    """
+    for time in range(times):
+        st.write(" ")
+
 
 # Settings
 st.sidebar.header("Data Upload and Name")
@@ -119,68 +130,73 @@ if file:
         df['id'] = df.index
         simuls_df = results_search.simulated_gsas2
         df = df[['id', 'name', 'rwp', 'wt', 'spacegroup', 'crystal_system', 'system_type']]
-        st.subheader('Raw Results')
-        AgGrid(df, width='50%', height=200)
-        with st.sidebar.expander("Viz Settings"):
-            viz_number = int(
-                st.number_input("Index of dataframe to visualize", value=0, min_value=-1, max_value=len(df) - 1, step=1,
-                                key='viz_number'))
-            plot_highest_corr = st.checkbox("Plot Highest correlated", value=False, key='plot_highest_corr')
-            if plot_highest_corr:
-                highest_correlated = int(
-                    st.number_input("Highest k correlated phases", min_value=1, max_value=len(simuls_df) - 1,
-                                    value=len(simuls_df) // 2, step=1, key='highest_corr'))
-                fig_highest_corr = plot_highest_correlated(data=results_search.exp_data_file, format=data_format,
-                                                           cif_info=results_search.cif_info.copy(),
-                                                           top=highest_correlated, width=800, height=600)
 
-        if viz_number != -1:
-            st.subheader('Visualization of Analysis')
+        with st.expander('Results (Tabular)', expanded = True):
+            AgGrid(df, width='50%', height=200)
+        with st.expander('Visualization of Analysis', expanded = True):
+            viz_number = st.selectbox("Results to Visualize", options=df.index, key="viz_number", format_func = lambda idx: df.loc[idx,"name"])
             fig = results_search.plot_result(viz_number)
-            fig.update_layout(title=None, width=800, height=600)
+            fig.update_layout(title=None, width=800, height=500)
             fig.update_xaxes(title=r'2theta (deg.)')
-            st.plotly_chart(fig, use_container_width=False)
-
-        if plot_highest_corr:
-            st.subheader(f'{highest_correlated} highest correlated phases')
-            st.plotly_chart(fig_highest_corr)
-
-        if st.sidebar.button('Zip Contents'):
-            shutil.make_archive(working_folder, 'zip', working_folder)
-            st.session_state['zip_file'] = True
-
-        if st.session_state['zip_file']:
-            if os.path.exists(f"{working_folder}.zip"):
-                with open(f"{working_folder}.zip", "rb") as fp:
-                    btn = st.sidebar.download_button(
+            st.plotly_chart(fig, use_container_width=True)
+            plot_highest_corr = st.checkbox("Plot Highest correlated", value=False, key='plot_highest_corr')
+        c1, c2 = st.columns(2)
+        with c1:
+            if st.button('Zip Contents'):
+                shutil.make_archive(working_folder, 'zip', working_folder)
+                st.session_state['zip_file'] = True
+        with c2:
+            if st.session_state['zip_file']:
+                if os.path.exists(f"{working_folder}.zip"):
+                    with open(f"{working_folder}.zip", "rb") as fp:
+                        btn = st.download_button(
                         label="Download ZIP file",
                         data=fp,
                         file_name=f"{name}_results.zip",
                         mime="application/zip"
                     )
 
-        with st.sidebar.expander('Optimizer Settings'):
-            optimizer_idx = process_input(
+        if plot_highest_corr:
+            with st.expander("Highest correlated Patterns"):
+                c1, c2 = st.columns([2, 8])
+                with c1:
+                    st_pad(5)
+                    highest_correlated = int(
+                    st.number_input("Highest k correlated phases", min_value=1, max_value=len(simuls_df) - 1,
+                                value=len(simuls_df) // 2, step=1, key='highest_corr'))
+                with c2:
+                    fig_highest_corr = plot_highest_correlated(data=results_search.exp_data_file, format=data_format,
+                                                        cif_info=results_search.cif_info.copy(),
+                                                        top=highest_correlated, width=800, height=400)
+                    st.plotly_chart(fig_highest_corr, use_container_width=True)
+
+    
+        with st.expander('Optimizer Settings'):
+            c1,c2,c3,c4 = st.columns(4)
+            with c1:
+                optimizer_idx = process_input(
                 st.text_input('Indexes to optmize seperated by comma:', value="0", key="opt_list"), return_int=True)
-
-            n_trials = int(
+            with c2:
+                n_trials = int(
                 st.number_input("Number of trials", min_value=20, max_value=99999, value=200, step=1, key="n_trials"))
-
-            allow_pref_orient = st.checkbox('Pref Orientation', value=True, key='pref_ori')
-
-            allow_atomic_params = st.checkbox('Atomic Params', value=False, key='atomic')
-
-            allow_broad = st.checkbox('Atomic Params', value=False, key='broadening')
-
-            allow_angle = st.checkbox('Acute angle', value=False, key='acute')
-
-            force_ori = st.checkbox('Force to use pref. ori', value=False, key='force_ori')
-
-            param = st.selectbox(label="Param to optimize", options=["rwp", "gof"])
-
-            random_state = int(
+            with c3:
+                param = st.selectbox(label="Param to optimize", options=["rwp", "gof"])
+            with c4:
+                random_state = int(
                 st.number_input(label="Random seed number", min_value=0, max_value=9999, step=1, value=42,
                                 key='random_state'))
+
+            c5, c6, c7, c8, c9 = st.columns(5)
+            with c5:
+                allow_pref_orient = st.checkbox('Pref Orientation', value=True, key='pref_ori')
+            with c6:
+                allow_atomic_params = st.checkbox('Atomic Params', value=False, key='atomic')
+            with c7:
+                allow_broad = st.checkbox('Atomic Params', value=False, key='broadening')
+            with c8:
+                allow_angle = st.checkbox('Acute angle', value=False, key='acute')
+            with c9:
+                force_ori = st.checkbox('Force to use pref. ori', value=False, key='force_ori')
 
             opt_args = dict(n_trials=n_trials,
                             allow_pref_orient=allow_pref_orient,
@@ -191,7 +207,6 @@ if file:
                             random_state=random_state,
                             force_ori=force_ori
                             )
-            st.header("Opt Args:")
             st.write(opt_args)
             if st.button('Run optimization'):
                 st.session_state['xerus_object'] = run_optmizer(results_search, optimizer_idx, opt_args)
@@ -199,22 +214,16 @@ if file:
                 st.balloons()
         st.markdown("<hr>", unsafe_allow_html=True)
         if st.session_state['optmized']:
-            with st.sidebar.expander('Check Optimization results'):
-                plot1 = st.checkbox('Plot lowest Rwp result')
-                show_crys = st.checkbox('Show Obtained Structural Parameters')
+            with st.expander('Optimization Results'):
+                st.write(
+                 f'Optimization finished. Best rwp is {st.session_state.xerus_object.optimizer.optim.rwp_best:.3f}%')
+                st.subheader('Refinement Result')
+                fig = st.session_state.xerus_object.optimizer.optim.plot_best(save=False, engine="plotly")
+                st.plotly_chart(fig, use_container_width=True)
+                st.subheader('Crystal Structure Result')
+                AgGrid(pd.DataFrame(data=st.session_state.xerus_object.optimizer.lattice_best), height=100)
                 if st.button('Export Results to Working Folder'):
                     st.session_state.xerus_object.export_results()
                     st.write('Optimizaton results were exported to folder!')
                     st.write('Rezip and press download again!')
 
-            st.header('Optimization Results')
-            st.write(
-                f'Optimization finished. Best rwp is {st.session_state.xerus_object.optimizer.optim.rwp_best:.3f}%')
-            if plot1:
-                st.subheader('Refinement Result')
-                fig = st.session_state.xerus_object.optimizer.optim.plot_best(save=False, engine="plotly")
-                st.plotly_chart(fig)
-
-            if show_crys:
-                st.subheader('Crystal Structure Result')
-                AgGrid(pd.DataFrame(data=st.session_state.xerus_object.optimizer.lattice_best), height=100)
