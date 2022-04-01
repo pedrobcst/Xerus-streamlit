@@ -138,6 +138,15 @@ if file:
             fig.update_xaxes(title=r'2theta (deg.)')
             st.plotly_chart(fig, use_container_width=True)
             plot_highest_corr = st.checkbox("Plot Highest correlated", value=False, key='plot_highest_corr')
+            if plot_highest_corr:
+                highest_correlated = int(st.number_input("Highest k correlated phases", min_value=1, max_value=len(simuls_df) - 1,
+                                value=len(simuls_df) // 3, step=1, key='highest_corr'))
+
+                fig_highest_corr = plot_highest_correlated(data=results_search.exp_data_file, format=data_format,
+                                                    cif_info=results_search.cif_info.copy(),
+                                                    top=highest_correlated, width=800, height=400)
+                st.plotly_chart(fig_highest_corr, use_container_width=True)
+
         c1, c2 = st.columns(2)
         with c1:
             if st.button('Zip Contents'):
@@ -153,48 +162,22 @@ if file:
                         file_name=f"{name}_results.zip",
                         mime="application/zip"
                     )
-
-        if plot_highest_corr:
-            with st.expander("Highest correlated Patterns"):
-                c1, c2 = st.columns([2, 8])
-                with c1:
-                    st_pad(5)
-                    highest_correlated = int(
-                    st.number_input("Highest k correlated phases", min_value=1, max_value=len(simuls_df) - 1,
-                                value=len(simuls_df) // 2, step=1, key='highest_corr'))
-                with c2:
-                    fig_highest_corr = plot_highest_correlated(data=results_search.exp_data_file, format=data_format,
-                                                        cif_info=results_search.cif_info.copy(),
-                                                        top=highest_correlated, width=800, height=400)
-                    st.plotly_chart(fig_highest_corr, use_container_width=True)
-
     
         with st.expander('Optimizer Settings'):
+            # Basic optimizer settings
             c1,c2,c3,c4 = st.columns(4)
-            with c1:
-                optimizer_idx = process_input(
-                st.text_input('Indexes to optmize seperated by comma:', value="0", key="opt_list"), return_int=True)
-            with c2:
-                n_trials = int(
-                st.number_input("Number of trials", min_value=20, max_value=99999, value=200, step=1, key="n_trials"))
-            with c3:
-                param = st.selectbox(label="Param to optimize", options=["rwp", "gof"])
-            with c4:
-                random_state = int(
-                st.number_input(label="Random seed number", min_value=0, max_value=9999, step=1, value=42,
-                                key='random_state'))
-
+            optimizer_idx = process_input(c1.text_input('Indexes to optmize seperated by comma:', value="0", key="opt_list"),return_int=True)
+            n_trials = int(c2.number_input("Number of trials", min_value=20, max_value=99999, value=200, step=1, key="n_trials"))
+            param = c3.selectbox(label="Param to optimize", options=["rwp", "gof"])
+            random_state = int(c4.number_input(label="Random seed number", min_value=0, max_value=9999, step=1, value=42,
+                            key='random_state'))
+            # Checkboxes
             c5, c6, c7, c8, c9 = st.columns(5)
-            with c5:
-                allow_pref_orient = st.checkbox('Pref Orientation', value=True, key='pref_ori')
-            with c6:
-                allow_atomic_params = st.checkbox('Atomic Params', value=False, key='atomic')
-            with c7:
-                allow_broad = st.checkbox('Atomic Params', value=False, key='broadening')
-            with c8:
-                allow_angle = st.checkbox('Acute angle', value=False, key='acute')
-            with c9:
-                force_ori = st.checkbox('Force to use pref. ori', value=False, key='force_ori')
+            allow_pref_orient = c5.checkbox('Pref Orientation', value=True, key='pref_ori')
+            allow_atomic_params = c6.checkbox('Atomic Params', value=False, key='atomic')
+            allow_broad = c7.checkbox('Atomic Params', value=False, key='broadening')
+            allow_angle = c8.checkbox('Acute angle', value=False, key='acute')
+            force_ori = c9.checkbox('Force to use pref. ori', value=False, key='force_ori')
 
             opt_args = dict(n_trials=n_trials,
                             allow_pref_orient=allow_pref_orient,
