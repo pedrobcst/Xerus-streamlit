@@ -85,3 +85,17 @@ def make_simulation_df(cif_info: pd.DataFrame) -> pd.DataFrame:
             simul_data[tk] = row[tk]
         dfs.append(simul_data)
     return dfs
+
+
+
+def make_selection_label(idx: int, df: pd.DataFrame) -> str:
+    """Make a label for the selection.
+    """
+    name = ""
+    if isinstance(df.loc[idx,"name"], list):
+        for phase, spacegroup in zip(df.loc[idx, "name"], df.loc[idx, "spacegroup"]):
+            name += f"{phase} ({spacegroup}) / "
+        name += f" Rwp: {df.loc[idx, 'rwp']:.3f}% (id:{idx})"
+    else:
+        name = f"{df.loc[idx, 'name']} ({df.loc[idx, 'spacegroup']}) / Rwp: {df.loc[idx, 'rwp']:.3f}% (id:{idx})"
+    return name
