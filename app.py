@@ -139,12 +139,25 @@ if file:
             st.plotly_chart(fig, use_container_width=True)
             plot_highest_corr = st.checkbox("Plot Highest correlated", value=False, key='plot_highest_corr')
             if plot_highest_corr:
-                highest_correlated = int(st.number_input("Highest k correlated phases", min_value=1, max_value=len(simuls_df) - 1,
+                c1, c2 = st.columns([2,4])
+                pattern_show = results_search.cif_info.copy()
+                pattern_show.sort_values(by='Cij', inplace=True, ascending=False)
+                pattern_show.reset_index(drop=True, inplace=True)
+
+                highest_correlated = int(c1.number_input("Highest k correlated phases", min_value=1, max_value=len(simuls_df) - 1,
                                 value=len(simuls_df) // 3, step=1, key='highest_corr'))
+
+                options = pattern_show.filename[:highest_correlated]
+                with c2:   
+                    st.caption("List of all Options")
+                    AgGrid(pattern_show.loc[:highest_correlated, ['filename', 'Cij', 'spacegroup']], width="50%", height=250)
+                
+                patterns_show = st.multiselect("Patterns to show", options=options, key='patterns_show', default=options)
 
                 fig_highest_corr = plot_highest_correlated(data=results_search.exp_data_file, format=data_format,
                                                     cif_info=results_search.cif_info.copy(),
-                                                    top=highest_correlated, width=800, height=400)
+                                                    top=highest_correlated, width=800, height=400,
+                                                    filter_columns=patterns_show)
                 st.plotly_chart(fig_highest_corr, use_container_width=True)
 
         c1, c2 = st.columns(2)

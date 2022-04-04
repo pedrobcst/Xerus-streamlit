@@ -63,6 +63,7 @@ def plot_highest_correlated(
         offset: float = 0.3,
         width: int = 1280,
         height: int = 968,
+        filter_columns: List[str] = None,
         **kwargs,
     ):
         """
@@ -90,6 +91,8 @@ def plot_highest_correlated(
             ("crystal_system", "?"),
             ("Cij", 1),
         ]
+        if filter_columns:
+            cif_info = cif_info[cif_info.filename.isin(filter_columns)]
         exp_data, _, _, _, = DataReader().read_data(data, fmt=format)
         simulations = make_simulation_df(cif_info)
         col_order = simulations[0].columns
@@ -117,8 +120,8 @@ def plot_highest_correlated(
         )
         config = dict({"scrollZoom": True})
         ## some default plotly options ##
-        hoverlabel = dict(font_size=18, font_family="Arial")
-        legend = {"font": dict(size=18)}
+        hoverlabel = dict(font_size=14, font_family="Arial")
+        legend = {"font": dict(size=12)}
 
         # Edit First and Second Plot
         figure.data[0]["mode"] = "markers"
