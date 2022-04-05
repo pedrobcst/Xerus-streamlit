@@ -21,9 +21,10 @@ def plot_read_data(data: str, format: str, poly_degree: int = 8, remove_base: bo
     df_new['background'] = background
     df_new['int_new'] = df_new.int - background
     fig = px.scatter(data_frame = df_new, x='theta', y = 'int', labels={"theta": "Theta", "int": "Intensity"}, template="presentation")
-    fig.data[0].mode = "markers"
+    fig.data[0].mode = "lines"
     fig.data[0].marker['color'] = 'purple'
     fig.data[0].marker['symbol'] = 'circle-open'
+    fig.data[0].marker['size'] = 6
     fig.data[0].name = "Exp. Data"
     fig.data[0].showlegend = True
 
@@ -121,7 +122,7 @@ def plot_highest_correlated(
         config = dict({"scrollZoom": True})
         ## some default plotly options ##
         hoverlabel = dict(font_size=14, font_family="Arial")
-        legend = {"font": dict(size=12)}
+        legend = {"font": dict(size=14)}
 
         # Edit First and Second Plot
         figure.data[0]["mode"] = "markers"

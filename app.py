@@ -42,17 +42,6 @@ def run_analysis(args_xerus: dict, args_analysis: dict):
 def run_optmizer(xerus_object, index_list: Union[int, List[int]], opt_args: dict):
     return run_opt(xerus_object, index_list, opt_args)
 
-def st_pad(times):
-    """Hack to pad widgets with empty strings.
-
-    Parameters
-    ----------
-    times : _type_
-        _description_
-    """
-    for time in range(times):
-        st.write(" ")
-
 
 # Settings
 st.sidebar.header("Data Upload and Name")
@@ -156,7 +145,7 @@ if file:
 
                 fig_highest_corr = plot_highest_correlated(data=results_search.exp_data_file, format=data_format,
                                                     cif_info=results_search.cif_info.copy(),
-                                                    top=highest_correlated, width=800, height=400,
+                                                    top=highest_correlated, width=800, height=800,
                                                     filter_columns=patterns_show)
                 st.plotly_chart(fig_highest_corr, use_container_width=True)
 
