@@ -1,2 +1,2 @@
 streamlit
-st_aggrid
+streamlit-aggrid
