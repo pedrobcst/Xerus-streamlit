@@ -1,6 +1,15 @@
+# NOTE:
+Main development of this interface has moved to the MAIN XERUS repository, and it has been merged there. All the development of the interface will be done there.
+
+
+
+
 # Xerus-streamlit
 This is the repository for the Streamlit interface of XRay Estimation Using Refinement and Similarity (XERUS)
 Currently, we are in beta phase. Most of functionalities of *Xerus* is already implemented and can be use via the interface without the need of any coding or use of jupyter notebooks.
+
+
+
 
 # INSTALLATION:
 
